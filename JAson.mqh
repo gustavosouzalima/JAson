@@ -78,18 +78,18 @@ public:
 
     // NOVAS FUNÇÕES ADICIONADAS
     // Converte array JSON para array de inteiros
-    bool ToArrInt(long &arr[])
+    bool ToArrLong(long &arr[])
     {
         if (m_type != jtARRAY) 
         {
-            Print("Erro: ToArrInt() - O tipo não é um array");
+            Print("Erro: ToArrLong() - O tipo não é um array");
             return false;
         }
 
         int size = Size();
         if (ArrayResize(arr, size) != size)
         {
-            Print("Erro: ToArrInt() - Falha ao redimensionar array");
+            Print("Erro: ToArrLong() - Falha ao redimensionar array");
             return false;
         }
 
@@ -195,7 +195,7 @@ void CJAVal::Serialize(string& js, bool bkey/*=false*/, bool coma/*=false*/)
 {
     if (m_type==jtUNDEF) return;
     if (coma) js+=",";
-    if (bkey) js+=StringFormat(""%s":", m_key);
+   if (bkey) js+=StringFormat("\"%s\":", m_key);
     int _n=Size();
     switch (m_type)
     {
@@ -203,7 +203,7 @@ void CJAVal::Serialize(string& js, bool bkey/*=false*/, bool coma/*=false*/)
     case jtBOOL: js+=(m_bv?"true":"false"); break;
     case jtINT: js+=IntegerToString(m_iv); break;
     case jtDBL: js+=DoubleToString(m_dv, m_prec); break;
-    case jtSTR: { string ss=Escape(m_sv); if (StringLen(ss)>0) js+=StringFormat(""%s"", ss); else js+="null"; } break;
+    case jtSTR: { string ss=Escape(m_sv); if (StringLen(ss)>0) js+=StringFormat("\"%s\"", ss); else js+="null"; } break;
     case jtARRAY: js+="["; for (int i=0; i<_n; i++) m_e[i].Serialize(js, false, i>0); js+="]"; break;
     case jtOBJ: js+="{"; for (int i=0; i<_n; i++) m_e[i].Serialize(js, true, i>0); js+="}"; break;
     }
@@ -220,14 +220,14 @@ bool CJAVal::Deserialize(char& js[], int slen, int &i)
         char c=js[i]; if (c==0) break;
         switch (c)
         {
-        case '\t': case '\r': case '\n': case ' ': // пропускаем из имени пробелы
+        case '\t': case '\r': case '\n': case ' ': // skip spaces from the name
             i0=i+1; break;
 
 
-        case '[': // начало массива. создаём объекты и забираем из js
+        case '[': // start of array. Create objects and retrieve them from js
         {
             i0=i+1;
-            if (m_type!=jtUNDEF) { Print(m_key+" "+string(__LINE__)); return false; } // если значение уже имеет тип, то это ошибка
+            if (m_type!=jtUNDEF) { Print(m_key+" "+string(__LINE__)); return false; } // if the value already has a type, then it is an error
             m_type=jtARRAY; // задали тип значения
             i++; CJAVal val(GetPointer(this), jtUNDEF);
             while (val.Deserialize(js, slen, i))
@@ -241,19 +241,19 @@ bool CJAVal::Deserialize(char& js[], int slen, int &i)
             return js[i]==']' || js[i]==0;
         }
         break;
-        case ']': if (!m_parent) return false; return m_parent.m_type==jtARRAY; // конец массива, текущее значение должны быть массивом
+        case ']': if (!m_parent) return false; return m_parent.m_type==jtARRAY; // end of array, current value must be an array
 
 
         case ':':
         {
             if (m_lkey=="") { Print(m_key+" "+string(__LINE__)); return false; }
             CJAVal val(GetPointer(this), jtUNDEF);
-            CJAVal *oc=Add(val); // тип объекта пока не определён
-            oc.m_key=m_lkey; m_lkey=""; // задали имя ключа
+            CJAVal *oc=Add(val); // the object type has not yet been determined
+            oc.m_key=m_lkey; m_lkey=""; // set the key name
             i++; if (!oc.Deserialize(js, slen, i)) { Print(m_key+" "+string(__LINE__)); return false; }
             break;
         }
-        case ',': // разделитель значений // тип значения уже должен быть определён
+        case ',': // value separator // value type must already be defined
             i0=i+1;
             if (!m_parent && m_type!=jtOBJ) { Print(m_key+" "+string(__LINE__)); return false; }
             else if (m_parent)
@@ -423,7 +423,7 @@ string CJAVal::Unescape(string a)
 /*
 === EXEMPLO DE USO DAS NOVAS FUNÇÕES ===
 
-string content = "{\"assinatura_ativa\":true,\"usuario_cadastrado\":true,\"nome_completo\":\"Gustavo de Souza Lima Pereira\",\"data_fim\":\"2025-12-24T00:00:00+00:00\",\"contas_liberadas\":[\"29950\",\"12345\",\"67890\"]}";
+string content = "{\"assinatura_ativa\":true,\"usuario_cadastrado\":true,\"nome_completo\":\"Gustavo de Souza Lima\",\"data_fim\":\"2025-12-24T00:00:00+00:00\",\"contas_liberadas\":[\"29950\",\"12345\",\"67890\"]}";
 
 CJAVal jv;
 jv.Deserialize(content);
@@ -437,7 +437,7 @@ if(jv["assinatura_ativa"].ToBool() == false)
 
 // Converter contas_liberadas para array de inteiros
 long contas_int[];
-if(jv["contas_liberadas"].ToArrInt(contas_int))
+if(jv["contas_liberadas"].ToArrLong(contas_int))
 {
    Print("Contas como inteiros:");
    for(int i=0; i<ArraySize(contas_int); i++)
