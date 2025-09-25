@@ -6,8 +6,8 @@ This enhanced version of the JAson.mqh library adds two new essential functions 
 
 ### 🆕 New Functions
 
-#### `ToArrInt(long &arr[])`
-Converts a JSON array to an MQL5 integer array (long).
+#### `ToArrLong(long &arr[])`
+Converts a JSON array to an MQL5 long array.
 
 **Parameters:**
 - `arr[]` - Destination array to receive the converted values
@@ -18,14 +18,13 @@ Converts a JSON array to an MQL5 integer array (long).
 
 **Example:**
 ```mql5
-long conta_int[];
-
-if(jv["contas_liberadas"].ToArrInt(contas_int))
+long contas_long[];
+if(jv["contas_liberadas"].ToArrLong(contas_long))
 {
-for(int i=0; i<ArraySize(contas_int); i++)
-{
-Print("Conta ", i, ": ", contas_int[i]);
-}
+    for(int i=0; i<ArraySize(contas_long); i++)
+    {
+        Print("Conta ", i, ": ", contas_long[i]);
+    }
 }
 ```
 
@@ -42,11 +41,12 @@ Converts a JSON array to an MQL5 string array.
 **Example:**
 ```mql5
 string contas_str[];
-if(jv["released_accounts"].ToArrStr(accounts_str))
+if(jv["contas_liberadas"].ToArrStr(contas_str))
 {
-for(int i=0; i<ArraySize(accounts_str); i++)
-{
-Print("Account ", i, ": ", accounts_str[i]); }
+    for(int i=0; i<ArraySize(contas_str); i++)
+    {
+        Print("Conta ", i, ": ", contas_str[i]);
+    }
 }
 ```
 
@@ -55,11 +55,11 @@ Print("Account ", i, ": ", accounts_str[i]); }
 **Input JSON:**
 ```json
 {
-"active_subscription": true,
-"registered_user": true,
-"full_name": "Gustavo de Souza Lima Pereira",
-"end_date": "2025-12-24T00:00:00+00:00",
-"released_accounts": ["29950", "12345", "67890"]
+    "assinatura_ativa": true,
+    "usuario_cadastrado": true,
+    "nome_completo": "Gustavo de Souza Lima Pereira",
+    "data_fim": "2025-12-24T00:00:00+00:00",
+    "contas_liberadas": ["29950", "12345", "67890"]
 }
 ```
 
@@ -69,32 +69,32 @@ CJAVal jv;
 jv.Deserialize(content);
 
 // Check active subscription
-if(jv["active_subscription"].ToBool() == false)
+if(jv["assinatura_ativa"].ToBool() == false)
 {
-Print("No Active Subscription");
-return("No Active Subscription");
+    Print("Sem Assinatura Ativa");
+    return("Sem Assinatura Ativa");
 }
 
-// Convert accounts to an array of integers
-long accounts_int[];
-if(jv["released_accounts"].ToArrInt(int_accounts))
+// Convert accounts to long array
+long contas_long[];
+if(jv["contas_liberadas"].ToArrLong(contas_long))
 {
-// Check if a specific account is released
-long user_account = 29950;
-for(int i=0; i<ArraySize(int_accounts); i++)
-{
-if(int_accounts[i] == user_account)
-{
-Print("Released account found!");
-break;
-}
-}
+    // Check if specific account is released
+    long conta_usuario = 29950;
+    for(int i=0; i<ArraySize(contas_long); i++)
+    {
+        if(contas_long[i] == conta_usuario)
+        {
+            Print("Conta liberada encontrada!");
+            break;
+        }
+    }
 }
 ```
 
 ### ✨ Features of the New Functions
 
-1. **Automatic Conversion**: Functions automatically convert between types (string → int, int → string)
+1. **Automatic Conversion**: Functions automatically convert between types (string → long, number → long)
 
 2. **Error Handling**: Full validation with descriptive messages
 
@@ -113,20 +113,90 @@ The functions include robust validation:
 - Provides clear error messages in the log
 - Returns false on failure
 
-### 📦 Included Files
+### 📦 Files Structure
 
-1. **JAson_enhanced.mqh** - Enhanced core library
-2. **Example_JAson_Enhanced.mq5** - Complete practical example
-3. **README-JAson-Enhanced.md** - This documentation
+```
+JAson-Enhanced/
+├── JAson.mqh              # Enhanced core library
+├── Examples/
+│   └── Example_Usage.mq5  # Complete practical example
+└── README.md              # This documentation
+```
 
 ### 🚀 How to Use
 
-1. Replace your current JAson.mqh library with the enhanced version
-2. Compile your projects normally
-3. Use the new `ToArrInt()` and `ToArrStr()` functions when necessary
+1. **Download** the enhanced JAson.mqh file
+2. **Replace** your current JAson.mqh library 
+3. **Compile** your projects normally (no breaking changes)
+4. **Use** the new functions when needed:
+   - `ToArrLong()` for numeric arrays
+   - `ToArrStr()` for string arrays
+
+### 💡 Migration Guide
+
+**Before (not possible):**
+```mql5
+// No direct way to convert JSON arrays
+```
+
+**After (enhanced):**
+```mql5
+long numbers[];
+string texts[];
+
+// Convert JSON array to long array
+jv["numbers"].ToArrLong(numbers);
+
+// Convert JSON array to string array  
+jv["texts"].ToArrStr(texts);
+```
+
+### 🔄 Compatibility
+
+- ✅ **100% backward compatible** with existing code
+- ✅ All original functions work unchanged
+- ✅ Same deserialization syntax
+- ✅ Same data access patterns
+- ✅ Works with MQL5 Build 1000+
+
+### 📋 API Reference
+
+#### Original Functions (unchanged)
+```mql5
+long ToInt()        // Get long value
+double ToDbl()      // Get double value  
+bool ToBool()       // Get boolean value
+string ToStr()      // Get string value
+```
+
+#### New Array Functions
+```mql5
+bool ToArrLong(long &arr[])     // Convert to long array
+bool ToArrStr(string &arr[])    // Convert to string array
+```
 
 ### ⚠️ Important Notes
 
-- The functions modify arrays by reference (they do not return arrays)
-- In case of error, the destination arrays may be partially filled
-- Always check the return value before using the converted data
+- Functions modify arrays **by reference** (do not return arrays)
+- In case of error, destination arrays may be **partially filled**
+- Always **check return value** before using converted data
+- JSON strings like `"123"` are automatically converted to `long` values
+
+### 🤝 Contributing
+
+This is an enhanced version of the original JAson.mqh library. Contributions and improvements are welcome!
+
+### 📄 License
+
+This software is licensed under the MIT License - see the original library for details.
+
+### 🔗 Links
+
+- **Original Library**: JAson.mqh (community library)
+- **Enhanced Version**: This repository
+- **Documentation**: This README
+- **Issues**: GitHub Issues tab
+
+---
+
+**Made with ❤️ for the MQL5 community**

@@ -70,14 +70,15 @@ public:
     bool operator!=(const bool a) { return m_bv!=a; }
     bool operator!=(string a) { return m_sv!=a; }
 
-
-    long ToInt() const { return m_iv; }
+    // Funções de conversão de valores individuais
+    long ToLong() const { return m_iv; }                    // Função principal
+    long ToInt() const { return m_iv; }                     // Alias para compatibilidade
     double ToDbl() const { return m_dv; }
     bool ToBool() const { return m_bv; }
     string ToStr() { return m_sv; }
 
-    // NOVAS FUNÇÕES ADICIONADAS
-    // Converte array JSON para array de inteiros
+    // Funções de conversão de arrays
+    // Converte array JSON para array de long
     bool ToArrLong(long &arr[])
     {
         if (m_type != jtARRAY) 
@@ -95,11 +96,14 @@ public:
 
         for (int i = 0; i < size; i++)
         {
-            arr[i] = m_e[i].ToInt();
+            arr[i] = m_e[i].ToLong();
         }
 
         return true;
     }
+    
+    // Alias para compatibilidade
+    bool ToArrInt(long &arr[]) { return ToArrLong(arr); }
 
     // Converte array JSON para array de strings
     bool ToArrStr(string &arr[])
@@ -125,12 +129,6 @@ public:
         return true;
     }
 
-    // Versões alternativas que retornam arrays diretamente (para facilitar uso)
-    // Nota: Em MQL5, não é possível retornar arrays dinâmicos diretamente,
-    // então mantemos as versões por referência acima
-
-
-
     virtual void FromStr(enJAType t, string a)
     {
         m_type=t;
@@ -147,15 +145,15 @@ public:
 
     virtual void Set(const CJAVal& a) { if (m_type==jtUNDEF) m_type=jtOBJ; CopyData(a); }
     virtual void Set(const CJAVal& list[]);
-    virtual CJAVal* Add(const CJAVal& item) { if (m_type==jtUNDEF) m_type=jtARRAY; /*ASSERT(m_type==jtOBJ || m_type==jtARRAY);*/ return AddBase(item); } // добавление
+    virtual CJAVal* Add(const CJAVal& item) { if (m_type==jtUNDEF) m_type=jtARRAY; return AddBase(item); }
     virtual CJAVal* Add(const int a) { CJAVal item(a); return Add(item); }
     virtual CJAVal* Add(const long a) { CJAVal item(a); return Add(item); }
     virtual CJAVal* Add(const double a, int aprec=-2) { CJAVal item(a, aprec); return Add(item); }
     virtual CJAVal* Add(const bool a) { CJAVal item(a); return Add(item); }
     virtual CJAVal* Add(string a) { CJAVal item(jtSTR, a); return Add(item); }
-    virtual CJAVal* AddBase(const CJAVal &item) { int c=Size(); ArrayResize(m_e, c+1, 100); m_e[c]=item; m_e[c].m_parent=GetPointer(this); return GetPointer(m_e[c]); } // добавление
-    virtual CJAVal* New() { if (m_type==jtUNDEF) m_type=jtARRAY; /*ASSERT(m_type==jtOBJ || m_type==jtARRAY);*/ return NewBase(); } // добавление
-    virtual CJAVal* NewBase() { int c=Size(); ArrayResize(m_e, c+1, 100); return GetPointer(m_e[c]); } // добавление
+    virtual CJAVal* AddBase(const CJAVal &item) { int c=Size(); ArrayResize(m_e, c+1, 100); m_e[c]=item; m_e[c].m_parent=GetPointer(this); return GetPointer(m_e[c]); }
+    virtual CJAVal* New() { if (m_type==jtUNDEF) m_type=jtARRAY; return NewBase(); }
+    virtual CJAVal* NewBase() { int c=Size(); ArrayResize(m_e, c+1, 100); return GetPointer(m_e[c]); }
 
 
     virtual string Escape(string a);
@@ -324,142 +322,145 @@ bool CJAVal::Deserialize(char& js[], int slen, int &i)
 }
 
 
-//------------------------------------------------------------------    ExtrStr
+//------------------------------------------------------------------	ExtrStr
 bool CJAVal::ExtrStr(char& js[], int slen, int &i)
 {
-    for (; js[i]!=0 && i<slen; i++)
-    {
-        char c=js[i];
-        if (c=='\"') break; // конец строки
-        if (c=='\\' && i+1<slen)
-        {
-            i++; c=js[i];
-            switch (c)
-            {
-            case '/': case '\\': case '\"': case 'b': case 'f': case 'r': case 'n': case 't': break; // это разрешенные
-            case 'u': // \uXXXX
-            {
-                i++;
-                for (int j=0; j<4 && i<slen && js[i]!=0; j++, i++)
-                {
-                    if (!((js[i]>='0' && js[i]<='9') || (js[i]>='A' && js[i]<='F') || (js[i]>='a' && js[i]<='f'))) { Print(m_key+" "+CharToString(js[i])+" "+string(__LINE__)); return false; } // не hex
-                }
-                i--;
-                break;
-            }
-            default: break; /*{ return false; } // неразрешенный символ с экранированием */
-            }
-        }
-    }
-    return true;
+	for (; js[i]!=0 && i<slen; i++)
+	{
+		char c=js[i];
+		if (c=='\"') break; // конец строки
+		if (c=='\\' && i+1<slen)
+		{
+			i++; c=js[i];
+			switch (c)
+			{
+			case '/': case '\\': case '\"': case 'b': case 'f': case 'r': case 'n': case 't': break; // это разрешенные
+			case 'u': // \uXXXX
+			{
+				i++;
+				for (int j=0; j<4 && i<slen && js[i]!=0; j++, i++)
+				{
+					if (!((js[i]>='0' && js[i]<='9') || (js[i]>='A' && js[i]<='F') || (js[i]>='a' && js[i]<='f'))) { Print(m_key+" "+CharToString(js[i])+" "+string(__LINE__)); return false; } // не hex
+				}
+				i--;
+				break;
+			}
+			default: break; /*{ return false; } // неразрешенный символ с экранированием */
+			}
+		}
+	}
+	return true;
 }
-//------------------------------------------------------------------    Escape
+//------------------------------------------------------------------	Escape
 string CJAVal::Escape(string a)
 {
-    ushort as[], s[]; int n=StringToShortArray(a, as); if (ArrayResize(s, 2*n)!=2*n) return NULL;
-    int j=0;
-    for (int i=0; i<n; i++)
-    {
-        switch (as[i])
-        {
-        case '\\': s[j]='\\'; j++; s[j]='\\'; j++; break;
-        case '"': s[j]='\\'; j++; s[j]='"'; j++; break;
-        case '/': s[j]='\\'; j++; s[j]='/'; j++; break;
-        case 8: s[j]='\\'; j++; s[j]='b'; j++; break;
-        case 12: s[j]='\\'; j++; s[j]='f'; j++; break;
-        case '\n': s[j]='\\'; j++; s[j]='n'; j++; break;
-        case '\r': s[j]='\\'; j++; s[j]='r'; j++; break;
-        case '\t': s[j]='\\'; j++; s[j]='t'; j++; break;
-        default: s[j]=as[i]; j++; break;
-        }
-    }
-    a=ShortArrayToString(s, 0, j);
-    return a;
+	ushort as[], s[]; int n=StringToShortArray(a, as); if (ArrayResize(s, 2*n)!=2*n) return NULL;
+	int j=0;
+	for (int i=0; i<n; i++)
+	{
+		switch (as[i])
+		{
+		case '\\': s[j]='\\'; j++; s[j]='\\'; j++; break;
+		case '"': s[j]='\\'; j++; s[j]='"'; j++; break;
+		case '/': s[j]='\\'; j++; s[j]='/'; j++; break;
+		case 8: s[j]='\\'; j++; s[j]='b'; j++; break;
+		case 12: s[j]='\\'; j++; s[j]='f'; j++; break;
+		case '\n': s[j]='\\'; j++; s[j]='n'; j++; break;
+		case '\r': s[j]='\\'; j++; s[j]='r'; j++; break;
+		case '\t': s[j]='\\'; j++; s[j]='t'; j++; break;
+		default: s[j]=as[i]; j++; break;
+		}
+	}
+	a=ShortArrayToString(s, 0, j);
+	return a;
 }
-//------------------------------------------------------------------    Unescape
+
+//------------------------------------------------------------------	Unescape
 string CJAVal::Unescape(string a)
 {
-    ushort as[], s[]; int n=StringToShortArray(a, as); if (ArrayResize(s, n)!=n) return NULL;
-    int j=0, i=0;
-    while (i<n)
-    {
-        ushort c=as[i];
-        if (c=='\\' && i<n-1)
-        {
-            switch (as[i+1])
-            {
-            case '\\': c='\\'; i++; break;
-            case '"': c='"'; i++; break;
-            case '/': c='/'; i++; break;
-            case 'b': c=8; /*08='\b'*/; i++; break;
-            case 'f': c=12;/*0c=\f*/ i++; break;
-            case 'n': c='\n'; i++; break;
-            case 'r': c='\r'; i++; break;
-            case 't': c='\t'; i++; break;
-            case 'u': // \uXXXX
-            {
-                i+=2; ushort k=0;
-                for (int jj=0; jj<4 && i<n; jj++, i++)
-                {
-                    c=as[i]; ushort h=0;
-                    if (c>='0' && c<='9') h=c-'0';
-                    else if (c>='A' && c<='F') h=c-'A'+10;
-                    else if (c>='a' && c<='f') h=c-'a'+10;
-                    else break; // не hex
-                    k+=h*(ushort)pow(16, (3-jj));
-                }
-                i--;
-                c=k;
-                break;
-            }
-            }
-        }
-        s[j]=c; j++; i++;
-    }
-    a=ShortArrayToString(s, 0, j);
-    return a;
+	ushort as[], s[]; int n=StringToShortArray(a, as); if (ArrayResize(s, n)!=n) return NULL;
+	int j=0, i=0;
+	while (i<n)
+	{
+		ushort c=as[i];
+		if (c=='\\' && i<n-1)
+		{
+			switch (as[i+1])
+			{
+			case '\\': c='\\'; i++; break;
+			case '"': c='"'; i++; break;
+			case '/': c='/'; i++; break;
+			case 'b': c=8; /*08='\b'*/; i++; break;
+			case 'f': c=12;/*0c=\f*/ i++; break;
+			case 'n': c='\n'; i++; break;
+			case 'r': c='\r'; i++; break;
+			case 't': c='\t'; i++; break;
+			case 'u': // \uXXXX
+			{
+				i+=2; ushort k=0;
+				for (int jj=0; jj<4 && i<n; jj++, i++)
+				{
+					c=as[i]; ushort h=0;
+					if (c>='0' && c<='9') h=c-'0';
+					else if (c>='A' && c<='F') h=c-'A'+10;
+					else if (c>='a' && c<='f') h=c-'a'+10;
+					else break; // не hex
+					k+=h*(ushort)pow(16, (3-jj));
+				}
+				i--;
+				c=k;
+				break;
+			}
+			}
+		}
+		s[j]=c; j++; i++;
+	}
+	a=ShortArrayToString(s, 0, j);
+	return a;
 }
 
-/*
-=== EXEMPLO DE USO DAS NOVAS FUNÇÕES ===
+// === EXEMPLO DE USO DAS NOVAS FUNÇÕES ===
 
-string content = "{\"assinatura_ativa\":true,\"usuario_cadastrado\":true,\"nome_completo\":\"Gustavo de Souza Lima\",\"data_fim\":\"2025-12-24T00:00:00+00:00\",\"contas_liberadas\":[\"29950\",\"12345\",\"67890\"]}";
+// string content = "{\"assinatura_ativa\":true,\"usuario_cadastrado\":true,\"nome_completo\":\"Gustavo de Souza Lima\",\"data_fim\":\"2025-12-24T00:00:00+00:00\",\"contas_liberadas\":[\"29950\",\"12345\",\"67890\"]}";
 
-CJAVal jv;
-jv.Deserialize(content);
+// CJAVal jv;
+// jv.Deserialize(content);
 
-// Verificar assinatura ativa
-if(jv["assinatura_ativa"].ToBool() == false)
-{
-   Print("Sem Assinatura Ativa");
-   return("Sem Assinatura Ativa");
-}
+// // Verificar assinatura ativa
+// if(jv["assinatura_ativa"].ToBool() == false)
+// {
+//    Print("Sem Assinatura Ativa");
+//    return("Sem Assinatura Ativa");
+// }
 
-// Converter contas_liberadas para array de inteiros
-long contas_int[];
-if(jv["contas_liberadas"].ToArrLong(contas_int))
-{
-   Print("Contas como inteiros:");
-   for(int i=0; i<ArraySize(contas_int); i++)
-   {
-      Print("Conta ", i, ": ", contas_int[i]);
-   }
-}
+// // Converter contas_liberadas para array de long (versões equivalentes)
+// long contas_long[];
+// if(jv["contas_liberadas"].ToArrLong(contas_long))  // Método preferido
+// //if(jv["contas_liberadas"].ToArrInt(contas_long))   // Alias para compatibilidade
+// {
+//    Print("Contas como long:");
+//    for(int i=0; i<ArraySize(contas_long); i++)
+//    {
+//       Print("Conta ", i, ": ", contas_long[i]);
+//    }
+// }
 
-// Converter contas_liberadas para array de strings
-string contas_str[];
-if(jv["contas_liberadas"].ToArrStr(contas_str))
-{
-   Print("Contas como strings:");
-   for(int i=0; i<ArraySize(contas_str); i++)
-   {
-      Print("Conta ", i, ": ", contas_str[i]);
-   }
-}
+// // Converter contas_liberadas para array de strings
+// string contas_str[];
+// if(jv["contas_liberadas"].ToArrStr(contas_str))
+// {
+//    Print("Contas como strings:");
+//    for(int i=0; i<ArraySize(contas_str); i++)
+//    {
+//       Print("Conta ", i, ": ", contas_str[i]);
+//    }
+// }
 
-// Acessar outros campos
-Print("Nome completo: ", jv["nome_completo"].ToStr());
-Print("Data fim: ", jv["data_fim"].ToStr());
-Print("Usuario cadastrado: ", jv["usuario_cadastrado"].ToBool());
+// // Acessar outros campos
+// Print("Nome completo: ", jv["nome_completo"].ToStr());
+// Print("Data fim: ", jv["data_fim"].ToStr());
+// Print("Usuario cadastrado: ", jv["usuario_cadastrado"].ToBool());
 
-*/
+// // Exemplos de uso dos diferentes métodos de conversão
+// long valor1 = jv["contas_liberadas"][0].ToLong();  // Método preferido
+// long valor2 = jv["contas_liberadas"][0].ToInt();   // Alias - mesmo resultado
